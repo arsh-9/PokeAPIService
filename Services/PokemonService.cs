@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using PokeAPIService.Clients;
 using PokeAPIService.Models;
 
@@ -6,14 +7,22 @@ namespace PokeAPIService.Services;
 public class PokemonService : IPokemonService
 {
     private readonly PokeApiClient _client;
+    private readonly IMemoryCache _cache;
 
-    public PokemonService(PokeApiClient client)
+    public PokemonService(PokeApiClient client, IMemoryCache cache)
     {
         _client = client;
+        _cache = cache;
     }
 
     public async Task<List<PokemonDto>> GetPokemonListAsync(int page, int pageSize)
     {
+        var cacheKey = $"pokemon:list:page:{page}:size:{pageSize}";
+
+        if (_cache.TryGetValue(cacheKey, out List<PokemonDto>? cached))
+        {
+            return cached;
+        }
         var offset = (page - 1) * pageSize;
         var pokemonListResponse = await _client.GetPokemonListAsync(pageSize, offset);
         List<PokemonDto> pokemonListDto = [];
@@ -33,6 +42,14 @@ public class PokemonService : IPokemonService
                 .ToList(),
                     Type = detail.Types.First().type.Name
                 }).ToList();
+
+                var cacheOptions = new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+                    SlidingExpiration = TimeSpan.FromMinutes(2)
+                };
+
+                _cache.Set(cacheKey, pokemonListDto, cacheOptions);
             }
         }
 
