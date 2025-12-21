@@ -19,22 +19,20 @@ public class PokemonService : IPokemonService
         List<PokemonDto> pokemonListDto = [];
         if (pokemonListResponse is not null)
         {
-            pokemonListDto = new List<PokemonDto>();
-            foreach (var pokemon in pokemonListResponse.Results)
+            var detailTasks = pokemonListResponse.Results
+            .Select(p => _client.GetPokemonDetailsByUrlAsync(p.Url));
+            var detailsList = await Task.WhenAll(detailTasks);
+            if (detailsList is not null)
             {
-                var details = await _client.GetPokemonDetailsByUrlAsync(pokemon.Url);
-                if (details is not null)
+                pokemonListDto = detailsList.Select(detail => new PokemonDto
                 {
-                    pokemonListDto.Add(new PokemonDto
-                    {
-                        Name = details.Name,
-                        Order = details.Order,
-                        Abilities = details.Abilities
-                            .Select(a => a.ability.Name)
-                            .ToList(),
-                        Type = details.Types.First().type.Name
-                    });
-                }
+                    Name = detail.Name,
+                    Order = detail.Order,
+                    Abilities = detail.Abilities
+                .Select(a => a.ability.Name)
+                .ToList(),
+                    Type = detail.Types.First().type.Name
+                }).ToList();
             }
         }
 
