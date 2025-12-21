@@ -26,5 +26,15 @@ public class PokemonController : ControllerBase
         var result = await _service.GetPokemonListAsync(page, pageSize);
         return Ok(result);
     }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string idOrName)
+    {
+        if (string.IsNullOrWhiteSpace(idOrName))
+            return BadRequest("idOrName is required");
+
+        var result = await _service.SearchPokemonAsync(idOrName);
+        return Ok(result);
+    }
 }
 

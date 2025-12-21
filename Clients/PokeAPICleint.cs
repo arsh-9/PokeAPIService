@@ -22,4 +22,11 @@ public class PokeApiClient
     {
         return await _httpClient.GetFromJsonAsync<PokemonDetails>(url);
     }
+
+    public async Task<PokemonDetails?> GetPokemonDetailsAsync(string idOrName)
+    {
+        return await _httpClient.GetFromJsonAsync<PokemonDetails>(
+            $"pokemon/{idOrName}"
+        );
+    }
 }

@@ -6,6 +6,12 @@ public class PokemonDetails
 
     public List<Ability> Abilities { get; set; } = [];
     public List<Type> Types { get; set; } = [];
+    public Sprite Sprites { get; set; } = new();
+}
+
+public class Sprite
+{
+    public string? Front_default { get; set; }
 }
 
 public class Ability

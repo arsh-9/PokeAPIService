@@ -38,4 +38,19 @@ public class PokemonService : IPokemonService
 
         return pokemonListDto;
     }
+
+    public async Task<PokemonSearchDto?> SearchPokemonAsync(string idOrName)
+    {
+        var details = await _client.GetPokemonDetailsAsync(idOrName);
+        PokemonSearchDto? pokemonSearchDto = null;
+        if (details is not null)
+        {
+            pokemonSearchDto = new PokemonSearchDto
+            {
+                Name = details.Name,
+                Img_Url = details.Sprites.Front_default
+            };
+        }
+        return pokemonSearchDto;
+    }
 }
