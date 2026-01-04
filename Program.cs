@@ -59,47 +59,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 builder.Services.AddHttpClient<IPokeApiClient, PokeApiClient>(client =>
-
 {
-
     client.BaseAddress = new Uri("https://pokeapi.co/api/v2/");
-
     client.Timeout = TimeSpan.FromSeconds(10);
-
 }).AddPolicyHandler(GetRetryPolicy()).AddPolicyHandler(GetCircuitBreakerPolicy());
 
 static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
-
 {
-
     return HttpPolicyExtensions.HandleTransientHttpError()
-
         .WaitAndRetryAsync(
-
         retryCount: 3,
-
         sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-
         onRetry: (outcome, timespan, retryAttempt, context) => { Console.WriteLine("retry"); }
-
         );
 
 }
 
 static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
-
 {
-
     return HttpPolicyExtensions.HandleTransientHttpError().CircuitBreakerAsync(
-
         handledEventsAllowedBeforeBreaking: 5, durationOfBreak: TimeSpan.FromSeconds(30),
-
         onBreak: (outcome, timespan) => { Console.WriteLine("break"); },
-
         onReset: () => { Console.WriteLine("reset"); }
-
         );
-
 }
 
 

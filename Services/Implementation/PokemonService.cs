@@ -8,21 +8,27 @@ public class PokemonService : IPokemonService
 {
     private readonly IPokeApiClient _client;
     private readonly IMemoryCache _cache;
+    private readonly ILogger<PokemonService> _logger;
 
-    public PokemonService(IPokeApiClient client, IMemoryCache cache)
+    public PokemonService(IPokeApiClient client, IMemoryCache cache, ILogger<PokemonService> logger)
     {
         _client = client;
         _cache = cache;
+        _logger = logger;
     }
 
     public async Task<List<PokemonDto>> GetPokemonListAsync(int page, int pageSize)
     {
+        _logger.LogInformation("Fetching Pokemon list. Page={Page}, PageSize={PageSize}", page, pageSize);
+
         var cacheKey = $"pokemon:list:page:{page}:size:{pageSize}";
 
         if (_cache.TryGetValue(cacheKey, out List<PokemonDto>? cached))
         {
+            _logger.LogInformation("Cache hit for key {CacheKey}", cacheKey);
             return cached;
         }
+        _logger.LogInformation("Cache miss for key {CacheKey}", cacheKey);
         var offset = (page - 1) * pageSize;
         var pokemonListResponse = await _client.GetPokemonListAsync(pageSize, offset);
         List<PokemonDto> pokemonListDto = [];
@@ -52,6 +58,7 @@ public class PokemonService : IPokemonService
                 _cache.Set(cacheKey, pokemonListDto, cacheOptions);
             }
         }
+        _logger.LogInformation("Fetched {Count} Pokemon from external API", pokemonListDto.Count);
 
         return pokemonListDto;
     }

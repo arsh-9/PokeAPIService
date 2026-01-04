@@ -1,6 +1,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using PokeAPIService.Models.Auth;
+using PokeAPIService.Services;
 namespace PokeAPIService.Controllers
 
 {
@@ -9,15 +10,17 @@ namespace PokeAPIService.Controllers
     [Route("api/auth")]
     public class AuthController : ControllerBase
     {
-        private readonly TokenService _tokenService;
+        private readonly ITokenService _tokenService;
         private readonly IRefreshTokenStore _refreshStore;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(
-            TokenService tokenService,
-            IRefreshTokenStore refreshStore)
+            ITokenService tokenService,
+            IRefreshTokenStore refreshStore, ILogger<AuthController> logger)
         {
             _tokenService = tokenService;
             _refreshStore = refreshStore;
+            _logger = logger;
         }
 
         [HttpPost("login")]
@@ -42,6 +45,7 @@ namespace PokeAPIService.Controllers
                     Path = "/api/auth/refresh",
                     Expires = refreshToken.ExpiresAt
                 });
+            _logger.LogInformation("Issued access token for UserId={UserId}", userId);
 
             return Ok(new AuthToken
             {
@@ -59,11 +63,16 @@ namespace PokeAPIService.Controllers
 
             if (refreshToken is null)
             {
+                _logger.LogWarning("Invalid or revoked refresh token attempt for UserId={UserId}", userId);
+
                 return Unauthorized("Invalid refresh token");
             }
             var stored = _refreshStore.Get(userId, refreshToken);
             if (stored == null || stored.ExpiresAt < DateTime.UtcNow)
+            {
+                _logger.LogWarning("Invalid or revoked refresh token attempt for UserId={UserId}", userId);
                 return Unauthorized("Invalid refresh token");
+            }
 
             //Rotate token
             _refreshStore.Revoke(userId, refreshToken);
@@ -82,7 +91,7 @@ namespace PokeAPIService.Controllers
                     Path = "/api/auth/refresh",
                     Expires = newRefreshToken.ExpiresAt
                 });
-
+            _logger.LogInformation("Issued access token for UserId={UserId}", userId);
             return Ok(new AuthToken
             {
                 AccessToken = _tokenService.CreateAccessToken(userId)
