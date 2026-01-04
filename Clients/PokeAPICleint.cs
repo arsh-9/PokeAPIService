@@ -4,7 +4,7 @@ using PokeAPIService.Exceptions;
 using PokeAPIService.Models;
 
 namespace PokeAPIService.Clients;
-public class PokeApiClient
+public class PokeApiClient: IPokeApiClient
 {
     private readonly HttpClient _httpClient;
 

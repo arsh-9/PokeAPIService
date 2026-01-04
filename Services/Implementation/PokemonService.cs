@@ -6,10 +6,10 @@ namespace PokeAPIService.Services;
 
 public class PokemonService : IPokemonService
 {
-    private readonly PokeApiClient _client;
+    private readonly IPokeApiClient _client;
     private readonly IMemoryCache _cache;
 
-    public PokemonService(PokeApiClient client, IMemoryCache cache)
+    public PokemonService(IPokeApiClient client, IMemoryCache cache)
     {
         _client = client;
         _cache = cache;

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PokeAPIService.Services;
 
@@ -14,6 +15,7 @@ public class PokemonController : ControllerBase
         _service = service;
     }
 
+    [Authorize]
     [HttpGet("list")]
     public async Task<IActionResult> GetList([FromQuery] int page = 1,
     [FromQuery] int pageSize = 10)
