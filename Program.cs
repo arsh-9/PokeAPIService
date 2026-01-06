@@ -1,13 +1,13 @@
 using System.Text;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 using PokeAPIService.Clients;
 
 using PokeAPIService.Middleware;
-
+using PokeAPIService.Models.Options;
 using PokeAPIService.Services;
 
 using Polly;
@@ -28,40 +28,35 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-
-    .AddJwtBearer(options =>
-
+builder.Services
+    .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<JwtOptions>>((options, jwt) =>
     {
+        var settings = jwt.Value;
 
         options.TokenValidationParameters = new TokenValidationParameters
-
         {
-
-            ValidateAudience = true,
-
             ValidateIssuer = true,
-
+            ValidateAudience = true,
             ValidateLifetime = true,
-
             ValidateIssuerSigningKey = true,
 
-            ValidIssuer = "PokemonApi",
-
-            ValidAudience = "PokemonApiUsers",
-
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("qwertyuioplkjhgfdsazxcvbnmqwertyuiop"))
-
+            ValidIssuer = settings.Issuer,
+            ValidAudience = settings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(settings.SigningKey))
         };
-
     });
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddHttpClient<IPokeApiClient, PokeApiClient>(client =>
+builder.Services.AddHttpClient<IPokeApiClient, PokeApiClient>((sp, client) =>
 {
-    client.BaseAddress = new Uri("https://pokeapi.co/api/v2/");
-    client.Timeout = TimeSpan.FromSeconds(10);
+    var options = sp.GetRequiredService<IOptions<PokeApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 }).AddPolicyHandler(GetRetryPolicy()).AddPolicyHandler(GetCircuitBreakerPolicy());
 
 static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
@@ -72,7 +67,6 @@ static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
         sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
         onRetry: (outcome, timespan, retryAttempt, context) => { Console.WriteLine("retry"); }
         );
-
 }
 
 static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
@@ -84,24 +78,23 @@ static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
         );
 }
 
-
 builder.Services.AddScoped<IPokemonService, PokemonService>();
 builder.Services.AddSingleton<IRefreshTokenStore, RefreshTokenStore>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.Configure<JwtOptions>(
+    builder.Configuration.GetSection("Jwt"));
 
+builder.Services.Configure<PokeApiOptions>(
+    builder.Configuration.GetSection("PokeApi"));
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
 if (app.Environment.IsDevelopment())
-
 {
-
     app.UseSwagger();
-
     app.UseSwaggerUI();
-
 }
 
 app.UseHttpsRedirection();

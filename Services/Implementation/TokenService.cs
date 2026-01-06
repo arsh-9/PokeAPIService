@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using PokeAPIService.Models.Options;
 using PokeAPIService.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -7,7 +9,12 @@ using System.Text;
 
 public class TokenService : ITokenService
 {
-    private const string SecretKey = "qwertyuioplkjhgfdsazxcvbnmqwertyuiop";
+    private readonly JwtOptions _options;
+
+    public TokenService(IOptions<JwtOptions> options)
+    {
+        _options = options.Value;
+    }
 
     public string CreateAccessToken(string userId)
     {
@@ -18,15 +25,15 @@ public class TokenService : ITokenService
         };
 
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(SecretKey));
+            Encoding.UTF8.GetBytes(_options.SigningKey));
 
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: "PokemonApi",
-            audience: "PokemonApiUsers",
+            issuer: _options.Issuer,
+            audience: _options.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(30),
+            expires: DateTime.UtcNow.AddMinutes(_options.AccessTokenMinutes),
             signingCredentials: creds);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -37,7 +44,7 @@ public class TokenService : ITokenService
         return new RefreshToken
         {
             Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-            ExpiresAt = DateTime.UtcNow.AddDays(7)
+            ExpiresAt = DateTime.UtcNow.AddDays(_options.RefreshTokenDays)
         };
     }
 }
